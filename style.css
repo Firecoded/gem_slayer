@@ -1,0 +1,74 @@
+body{
+    margin: 0;
+    font-size: 0;    
+}
+*{
+    box-sizing: border-box;
+    margin: 0;
+}
+.main-cont{
+    height: 100vh;
+}
+
+.gameboard-cont{
+    height: 90%;
+    width: 80%;
+    position: relative;
+    left: 10%;
+    top: 3%;
+    border: 2px solid red;
+}
+.header-cont{
+    height: 10%;
+    width: 100%;
+}
+.player1-cont,
+.player2-cont{
+    position: relative;
+    height: 90%;
+    width: 20%;
+    display: inline-block;
+}
+
+.team{
+    width: 100%;
+    height: 25%;
+    position: relative;
+    display: inline-block;
+    border: 2px solid green;
+}
+
+.gameboard{
+    width: 60%;
+    height: 90%;
+    position: relative;
+    border: 2px solid blue;
+    display: inline-block;
+}
+.gameboard-tile{
+    height: 12.5%;
+    width: 12.5%;
+    position: relative;
+    border: 1px solid goldenrod;
+    display: inline-block;
+}
+.top-div{
+    height: 100%;
+    width: 100%;
+    position: absolute;
+}
+.red{
+    background-color: red;
+}
+.blue{
+    background-color: blue;
+}
+.green {
+    background-color:green;
+}
+.yellow {
+    background-color: yellow;
+}
+.bomb {
+    background-color:black;
+}
