@@ -69,6 +69,12 @@ body{
 .yellow {
     background-color: yellow;
 }
+.brown {
+    background-color: rgb(77, 23, 23);
+}
+.purple {
+    background-color: purple;
+}
 .bomb {
     background-color:black;
 }
