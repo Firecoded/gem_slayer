@@ -34,6 +34,10 @@ const globalObj = {
         'down': ['left', 'right'],
         'left': ['up', 'down'],
         'right': ['up', 'down']
+    },
+    possibleMatchesMap : [],
+    clickTracker: {
+
     }
 }
 
@@ -53,8 +57,8 @@ function decideGem(){
     let gemArray = Object.keys(globalObj.gemColorRef);
     return gemArray[randomNum];
 }
-function checkForMatchesOnStart(){
-    const {directionCheck, gameboardArray, matchesFound} = globalObj;
+function checkForMatchesOnStart(){ // make sure no gems match on game start
+    const {directionCheck, gameboardArray, matchesFound, possibleMatchesMap} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
             for ( var key in directionCheck){
@@ -78,6 +82,7 @@ function checkForMatchesOnStart(){
     }
     buildGameboard();
     checkIfMovesAvailable();
+    enableClickForMatchingGems(possibleMatchesMap);
 }
 function buildGameboard(){
     const gameArea = $('.gameboard');
@@ -115,8 +120,7 @@ function checkFurtherOnStart(startY, startX, nextY, nextX, direction, matchTrack
         checkIfValidMoveOnStart(matchTracker[direction]);
     }
 }
-function checkIfValidMoveOnStart(moveObj){
-    // console.log(moveObj)
+function checkIfValidMoveOnStart(moveObj){ //if any possble matches on build, replace matching gems then recheck
     const {gameboardArray} = globalObj;
     if (moveObj.count < 3){    
         return;
@@ -157,7 +161,7 @@ function checkIfMovesAvailable(){
 }
 
 function lookForMatchesNearby(dataObj){
-    const {directionCheck, gameboardArray, oppDirection, possibleMatchesRef} = globalObj;
+    const {directionCheck, gameboardArray, oppDirection, possibleMatchesRef, possibleMatchesMap} = globalObj;
     const {cordToCheck, direction, matches, color} = dataObj
     for ( var key in directionCheck){
         var adjGemY = cordToCheck.y + directionCheck[key].y;
@@ -183,10 +187,13 @@ function lookForMatchesNearby(dataObj){
             continue;
         }
         if((matches[possibleMatchesRef[direction][0]] !== undefined && matches[possibleMatchesRef[direction][1]] !== undefined) || matches[key].length > 1){
-            console.log('possible match?:', dataObj);
+            var moveMapObj = {'gemToMatch': {'y':dataObj.startCord.y, 'x': dataObj.startCord.x},
+                              'gemToMove': {'y':dataObj.cordToCheck.y, 'x': dataObj.cordToCheck.x},
+                              'matchGemDirection': dataObj.direction,
+                              'otherGemsThatMatch': dataObj.matches};
+            possibleMatchesMap.push(moveMapObj);                    
         }
-    }
-     
+    }     
 }
 
 function recursiveCheckForAdditional(matchObj, direction, color){
@@ -211,9 +218,31 @@ function recursiveCheckForAdditional(matchObj, direction, color){
     return;
 }
 
-
-
-
 function applyClickHandlers(){
+    $(".gameboard").on('click', '.click', handleGemClick);
+}
 
+function enableClickForMatchingGems(moveMap){
+    moveMap.map((item, index)=>{
+        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click');
+        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click');
+    })
+}
+function handleGemClick(){
+    const {clickTracker, possibleMatchesMap} = globalObj;
+    if(clickTracker.click1 !== undefined && clickTracker.click2){
+        return;
+    }
+    if(clickTracker.click1 === undefined){
+        let click1Y = $(this).attr('row');
+        let click1X = $(this).attr('col');
+        clickTracker['click1'] = {'y': click1Y, 'x': click1X};
+    } else {
+        let click2Y = $(this).attr('row');
+        let click2X = $(this).attr('col');
+        clickTracker.click2 = {'y': click2Y, 'x': click2X};
+        $('div.click').removeClass('click');
+    }
+    
+    console.log(clickTracker)
 }

@@ -78,3 +78,9 @@ body{
 .bomb {
     background-color:black;
 }
+.click{
+    cursor: pointer;
+}
+.highlight{
+    border: 1px solid white;
+}
