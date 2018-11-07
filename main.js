@@ -36,9 +36,8 @@ const globalObj = {
         'right': ['up', 'down']
     },
     possibleMatchesMap : [],
-    clickTracker: {
+    clickTracker: {}
 
-    }
 }
 
 function buildGameboardArray(size){
@@ -190,7 +189,8 @@ function lookForMatchesNearby(dataObj){
             var moveMapObj = {'gemToMatch': {'y':dataObj.startCord.y, 'x': dataObj.startCord.x},
                               'gemToMove': {'y':dataObj.cordToCheck.y, 'x': dataObj.cordToCheck.x},
                               'matchGemDirection': dataObj.direction,
-                              'otherGemsThatMatch': dataObj.matches};
+                              'otherGemsThatMatch': dataObj.matches,
+                              'color': color};
             possibleMatchesMap.push(moveMapObj);                    
         }
     }     
@@ -229,10 +229,12 @@ function enableClickForMatchingGems(moveMap){
     })
 }
 function handleGemClick(){
-    const {clickTracker, possibleMatchesMap} = globalObj;
-    if(clickTracker.click1 !== undefined && clickTracker.click2){
+    const {clickTracker, possibleMatchesMap, gameboardArray} = globalObj;
+    if(clickTracker.click1 !== undefined && clickTracker.click2 !== undefined){
         return;
     }
+    var matchingGem;
+    var movingGem;
     if(clickTracker.click1 === undefined){
         let click1Y = $(this).attr('row');
         let click1X = $(this).attr('col');
@@ -242,7 +244,57 @@ function handleGemClick(){
         let click2X = $(this).attr('col');
         clickTracker.click2 = {'y': click2Y, 'x': click2X};
         $('div.click').removeClass('click');
+        for(let i = 0; i < possibleMatchesMap.length; i++){
+            if((clickTracker.click1.y == possibleMatchesMap[i].gemToMatch.y || clickTracker.click2.y == possibleMatchesMap[i].gemToMatch.y) && (clickTracker.click1.x == possibleMatchesMap[i].gemToMatch.x || clickTracker.click2.x == possibleMatchesMap[i].gemToMatch.x)){
+                matchingGem = {'y': possibleMatchesMap[i].gemToMatch.y, 'x': possibleMatchesMap[i].gemToMatch.x, 'index': i};
+            };
+            if((clickTracker.click1.y == possibleMatchesMap[i].gemToMove.y || clickTracker.click2.y == possibleMatchesMap[i].gemToMove.y) && (clickTracker.click1.x == possibleMatchesMap[i].gemToMove.x || clickTracker.click2.x == possibleMatchesMap[i].gemToMove.x)){
+                movingGem = {'y': possibleMatchesMap[i].gemToMove.y, 'x': possibleMatchesMap[i].gemToMove.x};
+            }
+        }
+        var temp = gameboardArray[matchingGem.y][matchingGem.x];
+        gameboardArray[matchingGem.y][matchingGem.x] = gameboardArray[movingGem.y][movingGem.x];
+        gameboardArray[movingGem.y][movingGem.x] = temp;
+        rebuildBoardAfterMove(gameboardArray, possibleMatchesMap[matchingGem.index]);
     }
-    
-    console.log(clickTracker)
+}
+
+function rebuildBoardAfterMove(gameboardArray, matchDetails){ // could explore changing this part into a addclass remove class kinda function depending on performance
+    const gameArea = $('.gameboard');
+    gameArea.empty();
+    const { gemColorRef, clickTracker, possibleMatchesMap } = globalObj;
+    for(let i = 0; i< gameboardArray.length; i++){
+        for(let j = 0; j< gameboardArray.length; j++){
+            let gemColor = gemColorRef[gameboardArray[i][j]];
+            let boardDiv = $('<div>').addClass('gameboard-tile');
+            let topDiv = $('<div>').addClass(`top-div ${gemColor}`).attr({'row': i,'col': j});
+            boardDiv.append(topDiv);
+            gameArea.append(boardDiv);
+        }
+    }
+    console.log(matchDetails);
+    clickTracker.click1 = undefined;
+    clickTracker.click2 = undefined;
+    possibleMatchesMap.splice(0, possibleMatchesMap.length)
+    checkIfMovesAvailable();
+    enableClickForMatchingGems(possibleMatchesMap);
+    causeGemsToShiftDown(matchDetails);
+}
+
+function causeGemsToShiftDown(matchingDetails){
+    const {possibleMatchesRef} = globalObj;
+    var possibleDirections = possibleMatchesRef[matchingDetails.matchGemDirection];
+    var filteredData;
+    Object.keys(matchingDetails.otherGemsThatMatch).map((item, index)=>{
+        if(item === possibleDirections[0] || item === possibleDirections[1]){
+            if(filteredData){
+                filteredData.cords.push(matchingDetails.otherGemsThatMatch[item]);
+            } else {
+                filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
+            }    
+        } else if (matchingDetails.otherGemsThatMatch[item].length>1){
+            filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
+        }
+    });
+    console.log(filteredData)
 }
