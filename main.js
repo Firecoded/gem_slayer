@@ -1,136 +1,21 @@
 $(document).ready(initApp);
 
 function initApp(){
-    buildGameboardArray(8);
-    applyClickHandlers();
-}
-
-const globalObj = {
-    gameboardArray : [],
-    gemColorRef : {
-        'r' : 'red',
-        'b' : 'blue',
-        'g' : 'green',
-        'y' : 'yellow',
-        'br': 'brown',
-        'p' : 'purple',
-        'x' : 'bomb'
-    },
-    directionCheck : {
-        'up': {'y': -1, 'x': 0},
-        'right': {'y': 0, 'x': 1},
-        'down' : {'y': 1, 'x': 0},
-        'left' : {'y': 0, 'x': -1}
-    },
-    oppDirection : {
-        'up': 'down',
-        'right': 'left',
-        'down' : 'up',
-        'left' : 'right'
-    },
-    possibleMatchesRef : {
-        'up': ['left', 'right'],
-        'down': ['left', 'right'],
-        'left': ['up', 'down'],
-        'right': ['up', 'down']
-    },
-    possibleMatchesMap : [],
-    possibleMatchesArranged : {},
-    clickTracker: {}
-
-}
-var matchesFound = false;
-
-function buildGameboardArray(size){
     const {possibleMatchesMap} = globalObj;
-    for(let i = 0; i<size; i++){
-        let array = [];
-        globalObj.gameboardArray.push(array);
-        for(let j = 0; j<size; j++){
-            let temp = decideGem();
-            globalObj.gameboardArray[i].push(temp);
-        }
-    }
+    buildGameboardArray(8);
     checkForMatchesOnStart();
     buildGameboard();
     checkIfMovesAvailable();
     filterPossibleMatches(possibleMatchesMap);
-    //enableClickForMatchingGems(globalObj.possibleMatchesMap);
+    applyClickHandlers();
 }
+
 function decideGem(){
     let randomNum = Math.floor(Math.random() * 7);
     let gemArray = Object.keys(globalObj.gemColorRef);
     return gemArray[randomNum];
-}
+} 
 
-function checkForMatchesOnStart(){ // make sure no gems match on game start
-    const {directionCheck, gameboardArray} = globalObj;
-    for(let i = 0; i< gameboardArray.length; i++){
-        for(let j = 0; j< gameboardArray.length; j++){
-            for ( var key in directionCheck){
-                let adjGemY = i + directionCheck[key].y;
-                let adjGemX = j + directionCheck[key].x;
-                if(checkOffBoard(adjGemY)){
-                    continue;
-                }
-                if(checkOffBoard(adjGemX)){
-                    continue;
-                }
-                if(gameboardArray[i][j] === gameboardArray[adjGemY][adjGemX]){
-                    checkFurtherOnStart(i, j, adjGemY, adjGemX, key, {}, gameboardArray[i][j])
-                }
-            }    
-        }
-    }
-}
-function buildGameboard(){
-    const gameArea = $('.gameboard');
-    const { gameboardArray, gemColorRef } = globalObj;
-    for(let i = 0; i< gameboardArray.length; i++){
-        for(let j = 0; j< gameboardArray.length; j++){
-            let gemColor = gemColorRef[gameboardArray[i][j]];
-            let boardDiv = $('<div>').addClass('gameboard-tile');
-            let topDiv = $('<div>').addClass(`top-div ${gemColor}`).attr({'row': i,'col': j});
-            boardDiv.append(topDiv);
-            gameArea.append(boardDiv);
-        }
-    }
-}
-function checkFurtherOnStart(startY, startX, nextY, nextX, direction, matchTracker, color){
-    const {directionCheck, gameboardArray} = globalObj;
-    let adjGemY = nextY + directionCheck[direction].y;
-    let adjGemX = nextX + directionCheck[direction].x;
-    if(checkOffBoard(adjGemY)){
-        return;
-    }
-    if(checkOffBoard(adjGemX)){
-        return;
-    }
-    if(matchTracker[direction] === undefined){
-        matchTracker[direction] = {'count': 2, 
-            'cordArr': [{'y' : startY, 'x': startX}, {'y': nextY, 'x': nextX}], 'color': color}
-    } else {
-        matchTracker[direction].count++
-        matchTracker[direction].cordArr.push({'y': nextY, 'x': nextX});
-    }
-    if(gameboardArray[startY][startX] === gameboardArray[adjGemY][adjGemX]){
-        checkFurtherOnStart(startY, startX, adjGemY, adjGemX, direction, matchTracker, color)
-    } else {
-        checkIfValidMoveOnStart(matchTracker[direction]);
-    }
-}
-function checkIfValidMoveOnStart(moveObj){ //if any possble matches on build, replace matching gems then recheck
-    const {gameboardArray} = globalObj;
-    if (moveObj.count < 3){    
-        return;
-    }
-    
-    for(let i = 0; i < moveObj.count; i++){
-        let tempCord = moveObj.cordArr[i];
-        gameboardArray[tempCord.y][tempCord.x] = decideGem();
-    }
-    checkForMatchesOnStart();   
-}
 function checkOffBoard(number){
     if(number<0 || number>globalObj.gameboardArray.length-1){
         return true;
@@ -247,33 +132,54 @@ function recursiveCheckForAdditional(matchObj, direction, color){
 }
 
 function applyClickHandlers(){
-    $(".gameboard").on('click', '.click1', handleGemClick);
-    $(".gameboard").on('click', '.click2', handleGemClick);
+    $(".gameboard").on('click', '.click', handleGemClick);
 }
-
-// var moveMapObj = {'gemToMatch': {'y':startCord.y, 'x': startCord.x},
-// 'gemToMove': {'y':cordToCheck.y, 'x': cordToCheck.x},
-// 'matchGemDirection': direction,
-// 'otherGemsThatMatch': newMatches,
-// 'color': color,
-// 'colorToMove': gameboardArray[cordToCheck.y][cordToCheck.x],
-// 'mulitMatch': false};
+// {'gemToMatch': {'y':startCord.y, 'x': startCord.x},  ----- match object structure reference
+//                               'gemToMove': {'y':cordToCheck.y, 'x': cordToCheck.x},
+//                               'matchGemDirection': direction,
+//                               'gemsThatMatch': newMatches,
+//                               'color': color,
+//                               'addColor': gameboardArray[cordToCheck.y][cordToCheck.x],
+//                               'mulitMatch': false};
 
 function filterPossibleMatches(matchesArr){
     console.log(matchesArr)
+    const {directionCheck} = globalObj;
     for(let i = 0; i<matchesArr.length-1; i++){
         for(let j = i+1; j < matchesArr.length; j++){
-            if(matchesArr[i].gemToMatch.y == matchesArr[j].gemToMove.y && matchesArr[i].gemToMatch.x == matchesArr[j].gemToMove.x){
-                if(matchesArr[j].gemToMatch.x == matchesArr[i].gemToMove.x && matchesArr[j].gemToMatch.y == matchesArr[i].gemToMove.y){
+            let spliceFlag = false;
+            let gemToMatchIY = matchesArr[i].gemToMatch.y;
+            let gemToMatchIX = matchesArr[i].gemToMatch.x
+            let gemToMatchJY = matchesArr[j].gemToMatch.y;
+            let gemToMatchJX = matchesArr[j].gemToMatch.x;
+            let gemToMoveIY = matchesArr[i].gemToMove.y;
+            let gemToMoveIX = matchesArr[i].gemToMove.x
+            let gemToMoveJY = matchesArr[j].gemToMove.y;
+            let gemToMoveJX = matchesArr[j].gemToMove.x;
+            if(gemToMatchIY == gemToMoveJY && gemToMatchIX == gemToMoveJX && gemToMatchJX == gemToMoveIX && gemToMatchJY == gemToMoveIY){
                     matchesArr[i]['addGemDirection'] = matchesArr[j].matchGemDirection;
-                    matchesArr[i]['addGemsThatMatch'] = matchesArr[j].otherGemsThatMatch;
+                    matchesArr[i]['addGemsThatMatch'] = matchesArr[j].gemsThatMatch;
                     matchesArr[i]['addColor'] = matchesArr[j].color;
                     matchesArr[i].mulitMatch = true;
-                    matchesArr[i].ref = matchesArr[j]
-                    matchesArr.splice(j, 1); 
-                }
-                   
+                    matchesArr[i].ref = matchesArr[j];
+                    spliceFlag = true;        
             }
+            if(gemToMatchIY == gemToMatchJY && gemToMatchIX == gemToMatchJX && gemToMoveJX == gemToMoveIX && gemToMoveJY == gemToMoveIY){
+                //matchesArr[i]['addGemsThatMatch2'] = matchesArr[j].gemsThatMatch;
+                matchesArr[i].ref = matchesArr[j];
+                for (let key in directionCheck){
+                    if(matchesArr[i].gemsThatMatch[key] === undefined && matchesArr[j].gemsThatMatch[key] !== undefined){
+                        matchesArr[i].gemsThatMatch[key] = matchesArr[j].gemsThatMatch[key];
+                    }
+                    if(matchesArr[i].gemsThatMatch[key] !== undefined && matchesArr[j].gemsThatMatch[key] !== undefined){
+                        matchesArr[i].gemsThatMatch[key].push(matchesArr[j].gemsThatMatch[key]);
+                    }
+                }
+                spliceFlag = true;
+            }
+            if(spliceFlag){
+                matchesArr.splice(j, 1);
+            }        
         }
     }
     console.log(matchesArr)
@@ -281,8 +187,8 @@ function filterPossibleMatches(matchesArr){
 
 function enableClickForMatchingGems(moveMap){
     moveMap.map((item, index)=>{
-        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click1');
-        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click2');
+        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click');
+        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click');
     })
 }
 function handleGemClick(){
@@ -293,25 +199,36 @@ function handleGemClick(){
     if(clickTracker.click1 === undefined){
         let click1Y = $(this).attr('row');
         let click1X = $(this).attr('col');
-        if($(this).hasClass('click1')){
-            clickTracker['click1'] = {'y': click1Y, 'x': click1X};
-        } else {
-            clickTracker['click2'] = {'y': click1Y, 'x': click1X};
-        }
+        clickTracker['click1'] = {'y': click1Y, 'x': click1X};
     } else {
         let click2Y = $(this).attr('row');
         let click2X = $(this).attr('col');
         clickTracker.click2 = {'y': click2Y, 'x': click2X};
-        $('div.click1').removeClass('click1');
-        $('div.click2').removeClass('click2');
-        changeArrayAndGems(clickTracker.click1, clickTracker.click2);
+        $('div.click').removeClass('click');
+        changeArrayAndGems(clickTracker);
         prepareForNextMatch();
     }
     console.log(clickTracker)
 }
+// addColor: "r"
+// addGemDirection: "left"
+// addGemsThatMatch:
+// up: (2) [{…}, {…}]
+// __proto__: Object
+// color: "g"
+// gemToMatch: {y: 2, x: 1}
+// gemToMove: {y: 2, x: 2}
+// gemsThatMatch: {up: Array(2)}
+// matchGemDirection: "right"
+// mulitMatch: true
+// ref: {gemToMatch: {…}, gemToMove: {…}, matchGemDirection: "left", gemsThatMatch: {…}, color: "r", …}
+// __proto__: Object
 
-function changeArrayAndGems(matchingObj, movingObj){
-    const {gameboardArray, gemColorRef} = globalObj;
+function changeArrayAndGems(clickTracker){
+    const {gameboardArray, gemColorRef, clickTracker} = globalObj;
+    
+    
+    
     let color1 = gameboardArray[matchingObj.y][matchingObj.x];
     let color2 = gameboardArray[movingObj.y][movingObj.x];
     gameboardArray[matchingObj.y][matchingObj.x] = color2;
