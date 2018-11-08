@@ -137,7 +137,7 @@ function checkOffBoard(number){
 }
 
 function checkIfMovesAvailable(){
-    const {directionCheck, gameboardArray} = globalObj;
+    const {directionCheck, gameboardArray, possibleMatchesMap, possibleMatchesRef} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
             for ( var key in directionCheck){
@@ -157,12 +157,14 @@ function checkIfMovesAvailable(){
             }    
         }
     }
+    console.log('1', possibleMatchesMap);
 }
 
 function lookForMatchesNearby(dataObj){
     const {directionCheck, gameboardArray, oppDirection, possibleMatchesRef, possibleMatchesMap} = globalObj;
-    const {cordToCheck, direction, matches, color} = dataObj
+    const {startCord, cordToCheck, direction, matches, color} = dataObj
     for ( var key in directionCheck){
+        var returnKey = false;
         var adjGemY = cordToCheck.y + directionCheck[key].y;
         var adjGemX = cordToCheck.x + directionCheck[key].x;
         if(checkOffBoard(adjGemY)){
@@ -174,22 +176,46 @@ function lookForMatchesNearby(dataObj){
         if(key === oppDirection[direction]){
             continue;
         }
+        var possible1 = possibleMatchesRef[direction][0];
+        var possible2 = possibleMatchesRef[direction][1];
+
         if(gameboardArray[adjGemY][adjGemX] === color){
             matches[key] = [{'y': adjGemY, 'x': adjGemX}];
             recursiveCheckForAdditional(matches, key, color);
         }
-        if(matches[possibleMatchesRef[direction][0]] !== undefined && matches[possibleMatchesRef[direction][1]] !== undefined){
-            recursiveCheckForAdditional(matches, possibleMatchesRef[direction][0], color);
-            recursiveCheckForAdditional(matches, possibleMatchesRef[direction][1], color);
+        if(matches[possible1] !== undefined && matches[possible2] !== undefined){
+            recursiveCheckForAdditional(matches, possible1, color);
+            recursiveCheckForAdditional(matches, possible2, color);
         }
         if(matches[key] === undefined){
             continue;
         }
-        if((matches[possibleMatchesRef[direction][0]] !== undefined && matches[possibleMatchesRef[direction][1]] !== undefined) || matches[key].length > 1){
-            var moveMapObj = {'gemToMatch': {'y':dataObj.startCord.y, 'x': dataObj.startCord.x},
-                              'gemToMove': {'y':dataObj.cordToCheck.y, 'x': dataObj.cordToCheck.x},
-                              'matchGemDirection': dataObj.direction,
-                              'otherGemsThatMatch': dataObj.matches,
+        
+        if((matches[possible1] !== undefined && matches[possible2] !== undefined) || matches[key].length > 1){
+            var newMatches = {};
+            if(matches[possible1] !== undefined && matches[possible2] !== undefined){
+                newMatches[possible1] = matches[possible1];
+                newMatches[possible2] = matches[possible2];
+            }
+            for( var newKey in matches){
+                if(newMatches[possible1] !== undefined && newMatches[possible2] !== undefined){
+                    if(newKey === possible1 || newKey === possible2){
+                        continue;
+                    }
+                }
+                if(matches[newKey].length > 1){
+                    newMatches[newKey] = matches[newKey];
+                } else {
+                    returnKey = true;
+                }
+            }
+            if(returnKey){
+                continue;
+            }
+            var moveMapObj = {'gemToMatch': {'y':startCord.y, 'x': startCord.x},
+                              'gemToMove': {'y':cordToCheck.y, 'x': cordToCheck.x},
+                              'matchGemDirection': direction,
+                              'otherGemsThatMatch': newMatches,
                               'color': color};
             possibleMatchesMap.push(moveMapObj);                    
         }
@@ -198,7 +224,7 @@ function lookForMatchesNearby(dataObj){
 
 function recursiveCheckForAdditional(matchObj, direction, color){
     const {directionCheck, gameboardArray} = globalObj;
-    if(matchObj[direction.length] < 1){
+    if(matchObj[direction].length < 1){
         var adjGemY = matchObj[direction].y + directionCheck[direction].y;
         var adjGemX = matchObj[direction].x + directionCheck[direction].x;
     } else {
