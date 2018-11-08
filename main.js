@@ -22,7 +22,6 @@ const globalObj = {
         'down' : {'y': 1, 'x': 0},
         'left' : {'y': 0, 'x': -1}
     },
-    matchesFound : false,
     oppDirection : {
         'up': 'down',
         'right': 'left',
@@ -36,11 +35,14 @@ const globalObj = {
         'right': ['up', 'down']
     },
     possibleMatchesMap : [],
+    possibleMatchesArranged : {},
     clickTracker: {}
 
 }
+var matchesFound = false;
 
 function buildGameboardArray(size){
+    const {possibleMatchesMap} = globalObj;
     for(let i = 0; i<size; i++){
         let array = [];
         globalObj.gameboardArray.push(array);
@@ -50,14 +52,19 @@ function buildGameboardArray(size){
         }
     }
     checkForMatchesOnStart();
+    buildGameboard();
+    checkIfMovesAvailable();
+    filterPossibleMatches(possibleMatchesMap);
+    //enableClickForMatchingGems(globalObj.possibleMatchesMap);
 }
 function decideGem(){
     let randomNum = Math.floor(Math.random() * 7);
     let gemArray = Object.keys(globalObj.gemColorRef);
     return gemArray[randomNum];
 }
+
 function checkForMatchesOnStart(){ // make sure no gems match on game start
-    const {directionCheck, gameboardArray, matchesFound, possibleMatchesMap} = globalObj;
+    const {directionCheck, gameboardArray} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
             for ( var key in directionCheck){
@@ -75,13 +82,6 @@ function checkForMatchesOnStart(){ // make sure no gems match on game start
             }    
         }
     }
-    if(matchesFound){
-        matchesFound = false;
-        checkForMatchesOnStart();
-    }
-    buildGameboard();
-    checkIfMovesAvailable();
-    enableClickForMatchingGems(possibleMatchesMap);
 }
 function buildGameboard(){
     const gameArea = $('.gameboard');
@@ -114,7 +114,7 @@ function checkFurtherOnStart(startY, startX, nextY, nextX, direction, matchTrack
         matchTracker[direction].cordArr.push({'y': nextY, 'x': nextX});
     }
     if(gameboardArray[startY][startX] === gameboardArray[adjGemY][adjGemX]){
-        checkFurtherOnStart(startY, startX, adjGemY, adjGemX, direction, matchTracker)
+        checkFurtherOnStart(startY, startX, adjGemY, adjGemX, direction, matchTracker, color)
     } else {
         checkIfValidMoveOnStart(matchTracker[direction]);
     }
@@ -124,10 +124,12 @@ function checkIfValidMoveOnStart(moveObj){ //if any possble matches on build, re
     if (moveObj.count < 3){    
         return;
     }
-    globalObj.matchesFound = true;
+    
     for(let i = 0; i < moveObj.count; i++){
-        gameboardArray[moveObj.cordArr[i].y][moveObj.cordArr[i].x] = decideGem();
-    }    
+        let tempCord = moveObj.cordArr[i];
+        gameboardArray[tempCord.y][tempCord.x] = decideGem();
+    }
+    checkForMatchesOnStart();   
 }
 function checkOffBoard(number){
     if(number<0 || number>globalObj.gameboardArray.length-1){
@@ -157,7 +159,6 @@ function checkIfMovesAvailable(){
             }    
         }
     }
-    console.log('1', possibleMatchesMap);
 }
 
 function lookForMatchesNearby(dataObj){
@@ -178,7 +179,6 @@ function lookForMatchesNearby(dataObj){
         }
         var possible1 = possibleMatchesRef[direction][0];
         var possible2 = possibleMatchesRef[direction][1];
-
         if(gameboardArray[adjGemY][adjGemX] === color){
             matches[key] = [{'y': adjGemY, 'x': adjGemX}];
             recursiveCheckForAdditional(matches, key, color);
@@ -215,8 +215,10 @@ function lookForMatchesNearby(dataObj){
             var moveMapObj = {'gemToMatch': {'y':startCord.y, 'x': startCord.x},
                               'gemToMove': {'y':cordToCheck.y, 'x': cordToCheck.x},
                               'matchGemDirection': direction,
-                              'otherGemsThatMatch': newMatches,
-                              'color': color};
+                              'gemsThatMatch': newMatches,
+                              'color': color,
+                              'addColor': gameboardArray[cordToCheck.y][cordToCheck.x],
+                              'mulitMatch': false};
             possibleMatchesMap.push(moveMapObj);                    
         }
     }     
@@ -245,13 +247,42 @@ function recursiveCheckForAdditional(matchObj, direction, color){
 }
 
 function applyClickHandlers(){
-    $(".gameboard").on('click', '.click', handleGemClick);
+    $(".gameboard").on('click', '.click1', handleGemClick);
+    $(".gameboard").on('click', '.click2', handleGemClick);
+}
+
+// var moveMapObj = {'gemToMatch': {'y':startCord.y, 'x': startCord.x},
+// 'gemToMove': {'y':cordToCheck.y, 'x': cordToCheck.x},
+// 'matchGemDirection': direction,
+// 'otherGemsThatMatch': newMatches,
+// 'color': color,
+// 'colorToMove': gameboardArray[cordToCheck.y][cordToCheck.x],
+// 'mulitMatch': false};
+
+function filterPossibleMatches(matchesArr){
+    console.log(matchesArr)
+    for(let i = 0; i<matchesArr.length-1; i++){
+        for(let j = i+1; j < matchesArr.length; j++){
+            if(matchesArr[i].gemToMatch.y == matchesArr[j].gemToMove.y && matchesArr[i].gemToMatch.x == matchesArr[j].gemToMove.x){
+                if(matchesArr[j].gemToMatch.x == matchesArr[i].gemToMove.x && matchesArr[j].gemToMatch.y == matchesArr[i].gemToMove.y){
+                    matchesArr[i]['addGemDirection'] = matchesArr[j].matchGemDirection;
+                    matchesArr[i]['addGemsThatMatch'] = matchesArr[j].otherGemsThatMatch;
+                    matchesArr[i]['addColor'] = matchesArr[j].color;
+                    matchesArr[i].mulitMatch = true;
+                    matchesArr[i].ref = matchesArr[j]
+                    matchesArr.splice(j, 1); 
+                }
+                   
+            }
+        }
+    }
+    console.log(matchesArr)
 }
 
 function enableClickForMatchingGems(moveMap){
     moveMap.map((item, index)=>{
-        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click');
-        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click');
+        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click1');
+        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click2');
     })
 }
 function handleGemClick(){
@@ -259,68 +290,63 @@ function handleGemClick(){
     if(clickTracker.click1 !== undefined && clickTracker.click2 !== undefined){
         return;
     }
-    var matchingGem;
-    var movingGem;
     if(clickTracker.click1 === undefined){
         let click1Y = $(this).attr('row');
         let click1X = $(this).attr('col');
-        clickTracker['click1'] = {'y': click1Y, 'x': click1X};
+        if($(this).hasClass('click1')){
+            clickTracker['click1'] = {'y': click1Y, 'x': click1X};
+        } else {
+            clickTracker['click2'] = {'y': click1Y, 'x': click1X};
+        }
     } else {
         let click2Y = $(this).attr('row');
         let click2X = $(this).attr('col');
         clickTracker.click2 = {'y': click2Y, 'x': click2X};
-        $('div.click').removeClass('click');
-        for(let i = 0; i < possibleMatchesMap.length; i++){
-            if((clickTracker.click1.y == possibleMatchesMap[i].gemToMatch.y || clickTracker.click2.y == possibleMatchesMap[i].gemToMatch.y) && (clickTracker.click1.x == possibleMatchesMap[i].gemToMatch.x || clickTracker.click2.x == possibleMatchesMap[i].gemToMatch.x)){
-                matchingGem = {'y': possibleMatchesMap[i].gemToMatch.y, 'x': possibleMatchesMap[i].gemToMatch.x, 'index': i};
-            };
-            if((clickTracker.click1.y == possibleMatchesMap[i].gemToMove.y || clickTracker.click2.y == possibleMatchesMap[i].gemToMove.y) && (clickTracker.click1.x == possibleMatchesMap[i].gemToMove.x || clickTracker.click2.x == possibleMatchesMap[i].gemToMove.x)){
-                movingGem = {'y': possibleMatchesMap[i].gemToMove.y, 'x': possibleMatchesMap[i].gemToMove.x};
-            }
-        }
-        var temp = gameboardArray[matchingGem.y][matchingGem.x];
-        gameboardArray[matchingGem.y][matchingGem.x] = gameboardArray[movingGem.y][movingGem.x];
-        gameboardArray[movingGem.y][movingGem.x] = temp;
-        rebuildBoardAfterMove(gameboardArray, possibleMatchesMap[matchingGem.index]);
+        $('div.click1').removeClass('click1');
+        $('div.click2').removeClass('click2');
+        changeArrayAndGems(clickTracker.click1, clickTracker.click2);
+        prepareForNextMatch();
     }
+    console.log(clickTracker)
 }
 
-function rebuildBoardAfterMove(gameboardArray, matchDetails){ // could explore changing this part into a addclass remove class kinda function depending on performance
-    const gameArea = $('.gameboard');
-    gameArea.empty();
+function changeArrayAndGems(matchingObj, movingObj){
+    const {gameboardArray, gemColorRef} = globalObj;
+    let color1 = gameboardArray[matchingObj.y][matchingObj.x];
+    let color2 = gameboardArray[movingObj.y][movingObj.x];
+    gameboardArray[matchingObj.y][matchingObj.x] = color2;
+    gameboardArray[movingObj.y][movingObj.x] = color1;
+    $(`.top-div[row=${matchingObj.y}][col=${matchingObj.x}]`).removeClass(gemColorRef[color1]);
+    $(`.top-div[row=${movingObj.y}][col=${movingObj.x}]`).removeClass(gemColorRef[color2]);
+    $(`.top-div[row=${matchingObj.y}][col=${matchingObj.x}]`).addClass(gemColorRef[color2]);
+    $(`.top-div[row=${movingObj.y}][col=${movingObj.x}]`).addClass(gemColorRef[color1]);
+}
+
+function prepareForNextMatch(){
     const { gemColorRef, clickTracker, possibleMatchesMap } = globalObj;
-    for(let i = 0; i< gameboardArray.length; i++){
-        for(let j = 0; j< gameboardArray.length; j++){
-            let gemColor = gemColorRef[gameboardArray[i][j]];
-            let boardDiv = $('<div>').addClass('gameboard-tile');
-            let topDiv = $('<div>').addClass(`top-div ${gemColor}`).attr({'row': i,'col': j});
-            boardDiv.append(topDiv);
-            gameArea.append(boardDiv);
-        }
-    }
-    console.log(matchDetails);
     clickTracker.click1 = undefined;
     clickTracker.click2 = undefined;
     possibleMatchesMap.splice(0, possibleMatchesMap.length)
     checkIfMovesAvailable();
     enableClickForMatchingGems(possibleMatchesMap);
-    causeGemsToShiftDown(matchDetails);
+    //causeGemsToShiftDown(matchDetails);
 }
 
-function causeGemsToShiftDown(matchingDetails){
-    const {possibleMatchesRef} = globalObj;
-    var possibleDirections = possibleMatchesRef[matchingDetails.matchGemDirection];
-    var filteredData;
-    Object.keys(matchingDetails.otherGemsThatMatch).map((item, index)=>{
-        if(item === possibleDirections[0] || item === possibleDirections[1]){
-            if(filteredData){
-                filteredData.cords.push(matchingDetails.otherGemsThatMatch[item]);
-            } else {
-                filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
-            }    
-        } else if (matchingDetails.otherGemsThatMatch[item].length>1){
-            filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
-        }
-    });
-    console.log(filteredData)
-}
+
+// function causeGemsToShiftDown(matchingDetails){
+//     const {possibleMatchesRef} = globalObj;
+//     var possibleDirections = possibleMatchesRef[matchingDetails.matchGemDirection];
+//     var filteredData;
+//     Object.keys(matchingDetails.otherGemsThatMatch).map((item, index)=>{
+//         if(item === possibleDirections[0] || item === possibleDirections[1]){
+//             if(filteredData){
+//                 filteredData.cords.push(matchingDetails.otherGemsThatMatch[item]);
+//             } else {
+//                 filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
+//             }    
+//         } else if (matchingDetails.otherGemsThatMatch[item].length>1){
+//             filteredData = {'cords' : matchingDetails.otherGemsThatMatch[item], 'direction' : item};
+//         }
+//     });
+//     console.log(filteredData)
+// }

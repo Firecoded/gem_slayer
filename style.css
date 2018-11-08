@@ -81,6 +81,10 @@ body{
 .click{
     cursor: pointer;
 }
+.click1,
+.click2{
+    cursor: pointer;
+}
 .highlight{
     border: 1px solid white;
 }
