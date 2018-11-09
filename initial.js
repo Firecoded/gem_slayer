@@ -7,7 +7,8 @@ const globalObj = {
         'y' : 'yellow',
         'br': 'brown',
         'p' : 'purple',
-        'x' : 'bomb'
+        'x' : 'bomb',
+        'match': 'match'
     },
     directionCheck : {
         'up': {'y': -1, 'x': 0},

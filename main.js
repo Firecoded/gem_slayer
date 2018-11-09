@@ -17,15 +17,8 @@ function decideGem(){
     return gemArray[randomNum];
 } 
 
-function checkOffBoard(number){
-    if(number < 0 || number > globalObj.gameboardArray.length-1){
-        return true;
-    }
-    return false;
-}
-
 function checkIfMovesAvailable(){
-    const {directionCheck, gameboardArray, possibleMatchesMap, possibleMatchesRef} = globalObj;
+    const {directionCheck, gameboardArray} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
             for ( var key in directionCheck){
@@ -289,19 +282,72 @@ function changeOtherMatchingGems(match){
         }
     }
 }
-
+var repeat = false;
 function prepareForNextMatch(){
-    const { gemColorRef, clickTracker, possibleMatchesMap } = globalObj;
+    const { clickTracker, possibleMatchesMap } = globalObj;
     clickTracker.click1 = undefined;
     clickTracker.click2 = undefined;
-    possibleMatchesMap.splice(0, possibleMatchesMap.length)
     checkForMatchesAfterMatch();
+    causeGemsToShiftDown();   
+}
+function completeAfterGemShift(){
+    const {possibleMatchesMap} = globalObj;
+    checkForMatchesAfterMatch(true);
+    possibleMatchesMap.splice(0, possibleMatchesMap.length)
     checkIfMovesAvailable();
     enableClickForMatchingGems(possibleMatchesMap);
-    //causeGemsToShiftDown(matchDetails);
 }
 
-function checkForMatchesAfterMatch(){
+function causeGemsToShiftDown(){
+    let repeatGem = false;
+    setTimeout(()=>{
+            setTime()
+        }, 500)
+    function setTime(){
+        repeatGem=false
+        const {gameboardArray, gemColorRef} = globalObj;
+        for(let i = gameboardArray.length-1; i > -1; i--){
+            for(let j = gameboardArray.length-1; j > -1; j--){
+                if(gameboardArray[i][j] === ''){
+                    repeatGem = true;
+                    if(checkOffBoard(i-1)){
+                        gameboardArray[i][j] = decideGem();
+                        $(`.top-div[row=${i}][col=${j}]`).removeClass('match');
+                        $(`.top-div[row=${i}][col=${j}]`).addClass(gemColorRef[gameboardArray[i][j]]);
+                    } else {
+                        if(gameboardArray[i-1][j] === ''){
+                           var color = 'match' 
+                        } else {
+                           var color = gameboardArray[i-1][j]
+                        }
+                        gameboardArray[i][j] = gameboardArray[i-1][j]
+                        $(`.top-div[row=${i}][col=${j}]`).removeClass('match');
+                        $(`.top-div[row=${i}][col=${j}]`).addClass(gemColorRef[color]);
+                        gameboardArray[i-1][j] = '';
+                        $(`.top-div[row=${i-1}][col=${j}]`).removeClass(gemColorRef[color]);
+                        $(`.top-div[row=${i-1}][col=${j}]`).addClass('match');
+                    } 
+                }
+            }
+        }
+        if(repeatGem){
+            causeGemsToShiftDown();
+        } else {
+            completeAfterGemShift();
+        }
+    }
+    
+    
+    
+}
+function checkOffBoard(number){
+    if(number < 0 || number > globalObj.gameboardArray.length-1){
+        return true;
+    }
+    return false;
+}
+
+function checkForMatchesAfterMatch(boolean){
     const {directionCheck, gameboardArray} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
@@ -320,6 +366,7 @@ function checkForMatchesAfterMatch(){
             }    
         }
     }
+    
 }
 function checkForMatchesFurther(startY, startX, nextY, nextX, direction, matchTracker, color){
     const {directionCheck, gameboardArray} = globalObj;
@@ -345,6 +392,7 @@ function checkForMatchesFurther(startY, startX, nextY, nextX, direction, matchTr
     }
 }
 function checkIfValidMove(moveObj){
+    let flag = false;
     const {gameboardArray, gemColorRef} = globalObj;
     if (moveObj.count < 3){    
         return;
@@ -353,11 +401,16 @@ function checkIfValidMove(moveObj){
     for(let i = 0; i<moveObj.count; i++){
         let current = moveObj.cordArr[i];
         if(gameboardArray[current.y][current.x] !== ''){
+            flag = true;
             console.log('after YIKES', moveObj)
             gameboardArray[current.y][current.x] = '';
             $(`.top-div[row=${current.y}][col=${current.x}]`).removeClass(gemColorRef[moveObj.color]);
             $(`.top-div[row=${current.y}][col=${current.x}]`).addClass('match');
         }
     }
-     
+    console.log('gemshift', flag)
+    if(flag){
+        causeGemsToShiftDown();
+    }    
 }
+
