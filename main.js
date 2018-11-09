@@ -7,6 +7,7 @@ function initApp(){
     buildGameboard();
     checkIfMovesAvailable();
     filterPossibleMatches(possibleMatchesMap);
+    enableClickForMatchingGems(possibleMatchesMap);
     applyClickHandlers();
 }
 
@@ -17,7 +18,7 @@ function decideGem(){
 } 
 
 function checkOffBoard(number){
-    if(number<0 || number>globalObj.gameboardArray.length-1){
+    if(number < 0 || number > globalObj.gameboardArray.length-1){
         return true;
     }
     return false;
@@ -103,7 +104,7 @@ function lookForMatchesNearby(dataObj){
                               'gemsThatMatch': newMatches,
                               'color': color,
                               'addColor': gameboardArray[cordToCheck.y][cordToCheck.x],
-                              'mulitMatch': false};
+                              'multiMatch': false};
             possibleMatchesMap.push(moveMapObj);                    
         }
     }     
@@ -115,8 +116,9 @@ function recursiveCheckForAdditional(matchObj, direction, color){
         var adjGemY = matchObj[direction].y + directionCheck[direction].y;
         var adjGemX = matchObj[direction].x + directionCheck[direction].x;
     } else {
-        var adjGemY = matchObj[direction][matchObj[direction].length-1].y + directionCheck[direction].y;
-        var adjGemX = matchObj[direction][matchObj[direction].length-1].x + directionCheck[direction].x;
+        var lenMinus1 = matchObj[direction].length-1
+        var adjGemY = matchObj[direction][lenMinus1].y + directionCheck[direction].y;
+        var adjGemX = matchObj[direction][lenMinus1].x + directionCheck[direction].x;
     }
     if(checkOffBoard(adjGemY)){
         return;
@@ -140,7 +142,7 @@ function applyClickHandlers(){
 //                               'gemsThatMatch': newMatches,
 //                               'color': color,
 //                               'addColor': gameboardArray[cordToCheck.y][cordToCheck.x],
-//                               'mulitMatch': false};
+//                               'multiMatch': false};
 
 function filterPossibleMatches(matchesArr){
     console.log(matchesArr)
@@ -160,19 +162,18 @@ function filterPossibleMatches(matchesArr){
                     matchesArr[i]['addGemDirection'] = matchesArr[j].matchGemDirection;
                     matchesArr[i]['addGemsThatMatch'] = matchesArr[j].gemsThatMatch;
                     matchesArr[i]['addColor'] = matchesArr[j].color;
-                    matchesArr[i].mulitMatch = true;
+                    matchesArr[i].multiMatch = true;
                     matchesArr[i].ref = matchesArr[j];
                     spliceFlag = true;        
             }
             if(gemToMatchIY == gemToMatchJY && gemToMatchIX == gemToMatchJX && gemToMoveJX == gemToMoveIX && gemToMoveJY == gemToMoveIY){
-                //matchesArr[i]['addGemsThatMatch2'] = matchesArr[j].gemsThatMatch;
                 matchesArr[i].ref = matchesArr[j];
                 for (let key in directionCheck){
                     if(matchesArr[i].gemsThatMatch[key] === undefined && matchesArr[j].gemsThatMatch[key] !== undefined){
                         matchesArr[i].gemsThatMatch[key] = matchesArr[j].gemsThatMatch[key];
                     }
                     if(matchesArr[i].gemsThatMatch[key] !== undefined && matchesArr[j].gemsThatMatch[key] !== undefined){
-                        matchesArr[i].gemsThatMatch[key].push(matchesArr[j].gemsThatMatch[key]);
+                        matchesArr[j].gemsThatMatch[key].concat(matchesArr[j].gemsThatMatch[key]);
                     }
                 }
                 spliceFlag = true;
@@ -187,8 +188,8 @@ function filterPossibleMatches(matchesArr){
 
 function enableClickForMatchingGems(moveMap){
     moveMap.map((item, index)=>{
-        $(`.top-div[row=${moveMap[index].gemToMatch.y}][col=${moveMap[index].gemToMatch.x}]`).addClass('click');
-        $(`.top-div[row=${moveMap[index].gemToMove.y}][col=${moveMap[index].gemToMove.x}]`).addClass('click');
+        $(`.top-div[row=${item.gemToMatch.y}][col=${item.gemToMatch.x}]`).addClass('click');
+        $(`.top-div[row=${item.gemToMove.y}][col=${item.gemToMove.x}]`).addClass('click');
     })
 }
 function handleGemClick(){
@@ -196,17 +197,15 @@ function handleGemClick(){
     if(clickTracker.click1 !== undefined && clickTracker.click2 !== undefined){
         return;
     }
-    if(clickTracker.click1 === undefined){
-        let click1Y = $(this).attr('row');
-        let click1X = $(this).attr('col');
-        clickTracker['click1'] = {'y': click1Y, 'x': click1X};
+    let clickY = $(this).attr('row');
+    let clickX = $(this).attr('col');
+    $(`.top-div[row=${clickY}][col=${clickX}]`).addClass('highlight');
+    if(clickTracker.click1 === undefined){    
+        clickTracker['click1'] = {'y': clickY, 'x': clickX};
     } else {
-        let click2Y = $(this).attr('row');
-        let click2X = $(this).attr('col');
-        clickTracker.click2 = {'y': click2Y, 'x': click2X};
-        $('div.click').removeClass('click');
-        changeArrayAndGems(clickTracker);
-        prepareForNextMatch();
+        clickTracker.click2 = {'y': clickY, 'x': clickX};
+        changeArrayAndGems(clickTracker, possibleMatchesMap);
+        //prepareForNextMatch();
     }
     console.log(clickTracker)
 }
@@ -220,34 +219,97 @@ function handleGemClick(){
 // gemToMove: {y: 2, x: 2}
 // gemsThatMatch: {up: Array(2)}
 // matchGemDirection: "right"
-// mulitMatch: true
+// multiMatch: true
 // ref: {gemToMatch: {…}, gemToMove: {…}, matchGemDirection: "left", gemsThatMatch: {…}, color: "r", …}
 // __proto__: Object
 
-function changeArrayAndGems(clickTracker){
-    const {gameboardArray, gemColorRef, clickTracker} = globalObj;
+function changeArrayAndGems(clickTracker, moveMap){
+    const {gameboardArray, gemColorRef} = globalObj;
+    const {click1, click2} = clickTracker;
+    moveMap.map((item, index)=>{
+        if(item.gemToMatch.y == click1.y && item.gemToMatch.x == click1.x){
+            if(item.gemToMove.y == click2.y && item.gemToMove.x == click2.x){
+                clickTracker.match = item;
+            }
+        }
+        if(item.gemToMatch.y == click2.y && item.gemToMatch.x == click2.x){
+            if(item.gemToMove.y == click1.y && item.gemToMove.x == click1.x){
+                clickTracker.match = item;
+            }
+        }
+    })
+    $('.top-div').removeClass('highlight');
+    if(!clickTracker.match){
+        clickTracker.click1 = undefined;
+        clickTracker.click2 = undefined;
+        return;
+    }
+    $('div.click').removeClass('click');
+    let gemMatch = clickTracker.match.gemToMatch;
+    let gemMove = clickTracker.match.gemToMove;
+    if(clickTracker.match.multiMatch){        
+        gameboardArray[gemMatch.y][gemMatch.x] = '';
+        gameboardArray[gemMove.y][gemMove.x] = '';
+        $(`.top-div[row=${gemMatch.y}][col=${gemMatch.x}]`).removeClass(gemColorRef[clickTracker.match.color]);
+        $(`.top-div[row=${gemMove.y}][col=${gemMove.x}]`).removeClass(gemColorRef[clickTracker.match.addColor]);
+        $(`.top-div[row=${gemMatch.y}][col=${gemMatch.x}]`).addClass('match');
+        $(`.top-div[row=${gemMove.y}][col=${gemMove.x}]`).addClass('match');
+    } else {
+        gameboardArray[gemMatch.y][gemMatch.x] = clickTracker.match.addColor;
+        gameboardArray[gemMove.y][gemMove.x] = '';
+        $(`.top-div[row=${gemMatch.y}][col=${gemMatch.x}]`).removeClass(gemColorRef[clickTracker.match.color]);
+        $(`.top-div[row=${gemMove.y}][col=${gemMove.x}]`).removeClass(gemColorRef[clickTracker.match.addColor]);
+        $(`.top-div[row=${gemMatch.y}][col=${gemMatch.x}]`).addClass(gemColorRef[clickTracker.match.addColor]);
+        $(`.top-div[row=${gemMove.y}][col=${gemMove.x}]`).addClass('match');
+    }
+    changeOtherMatchingGems(clickTracker.match, gemMatch, gemMove)
     
-    
-    
-    let color1 = gameboardArray[matchingObj.y][matchingObj.x];
-    let color2 = gameboardArray[movingObj.y][movingObj.x];
-    gameboardArray[matchingObj.y][matchingObj.x] = color2;
-    gameboardArray[movingObj.y][movingObj.x] = color1;
-    $(`.top-div[row=${matchingObj.y}][col=${matchingObj.x}]`).removeClass(gemColorRef[color1]);
-    $(`.top-div[row=${movingObj.y}][col=${movingObj.x}]`).removeClass(gemColorRef[color2]);
-    $(`.top-div[row=${matchingObj.y}][col=${matchingObj.x}]`).addClass(gemColorRef[color2]);
-    $(`.top-div[row=${movingObj.y}][col=${movingObj.x}]`).addClass(gemColorRef[color1]);
 }
 
-function prepareForNextMatch(){
-    const { gemColorRef, clickTracker, possibleMatchesMap } = globalObj;
-    clickTracker.click1 = undefined;
-    clickTracker.click2 = undefined;
-    possibleMatchesMap.splice(0, possibleMatchesMap.length)
-    checkIfMovesAvailable();
-    enableClickForMatchingGems(possibleMatchesMap);
-    //causeGemsToShiftDown(matchDetails);
+function changeOtherMatchingGems(match, gemMatch, gemMove){
+    console.log('matching', match)
+    const {gameboardArray, gemColorRef} = globalObj;
+    if(!match.multiMatch){
+        for(let key in match.gemsThatMatch){
+            if(match.gemsThatMatch[key] !== undefined){
+                match.gemsThatMatch[key].map((item, index)=>{
+                    gameboardArray[item.y][item.x] = '';
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).removeClass(gemColorRef[match.color]);
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).addClass('match');
+                })
+            }
+        }
+    } else {
+        for(let key in match.gemsThatMatch){
+            if(match.gemsThatMatch[key] !== undefined){
+                match.gemsThatMatch[key].map((item, index)=>{
+                    gameboardArray[item.y][item.x] = '';
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).removeClass(gemColorRef[match.color]);
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).addClass('match');
+                })
+            }
+        }
+        for(let key in match.addGemsThatMatch){
+            if(match.addGemsThatMatch[key] !== undefined){
+                match.addGemsThatMatch[key].map((item, index)=>{
+                    gameboardArray[item.y][item.x] = '';
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).removeClass(gemColorRef[match.addColor]);
+                    $(`.top-div[row=${item.y}][col=${item.x}]`).addClass('match');
+                })
+            }
+        }
+    }
 }
+
+// function prepareForNextMatch(){
+//     const { gemColorRef, clickTracker, possibleMatchesMap } = globalObj;
+//     clickTracker.click1 = undefined;
+//     clickTracker.click2 = undefined;
+//     possibleMatchesMap.splice(0, possibleMatchesMap.length)
+//     checkIfMovesAvailable();
+//     enableClickForMatchingGems(possibleMatchesMap);
+//     //causeGemsToShiftDown(matchDetails);
+// }
 
 
 // function causeGemsToShiftDown(matchingDetails){

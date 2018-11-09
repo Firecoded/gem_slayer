@@ -78,6 +78,9 @@ body{
 .bomb {
     background-color:black;
 }
+.match{
+    background-color: gray;
+}
 .click{
     cursor: pointer;
 }
@@ -87,4 +90,5 @@ body{
 }
 .highlight{
     border: 1px solid white;
+    cursor: pointer;
 }
