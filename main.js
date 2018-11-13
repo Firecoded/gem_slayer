@@ -284,7 +284,7 @@ function changeOtherMatchingGems(match){
 }
 var repeat = false;
 function prepareForNextMatch(){
-    const { clickTracker, possibleMatchesMap } = globalObj;
+    const { clickTracker } = globalObj;
     clickTracker.click1 = undefined;
     clickTracker.click2 = undefined;
     checkForMatchesAfterMatch();
@@ -292,7 +292,7 @@ function prepareForNextMatch(){
 }
 function completeAfterGemShift(){
     const {possibleMatchesMap} = globalObj;
-    checkForMatchesAfterMatch(true);
+    checkForMatchesAfterMatch();
     possibleMatchesMap.splice(0, possibleMatchesMap.length)
     checkIfMovesAvailable();
     enableClickForMatchingGems(possibleMatchesMap);
@@ -331,14 +331,11 @@ function causeGemsToShiftDown(){
             }
         }
         if(repeatGem){
-            causeGemsToShiftDown();
+            setTimeout(causeGemsToShiftDown, 100);
         } else {
             completeAfterGemShift();
         }
-    }
-    
-    
-    
+    }  
 }
 function checkOffBoard(number){
     if(number < 0 || number > globalObj.gameboardArray.length-1){
@@ -347,7 +344,7 @@ function checkOffBoard(number){
     return false;
 }
 
-function checkForMatchesAfterMatch(boolean){
+function checkForMatchesAfterMatch(){
     const {directionCheck, gameboardArray} = globalObj;
     for(let i = 0; i< gameboardArray.length; i++){
         for(let j = 0; j< gameboardArray.length; j++){
@@ -410,7 +407,7 @@ function checkIfValidMove(moveObj){
     }
     console.log('gemshift', flag)
     if(flag){
-        causeGemsToShiftDown();
+        setTimeout(causeGemsToShiftDown, 300);
     }    
 }
 
